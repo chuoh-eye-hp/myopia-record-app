@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>視力の記録ノート HTML版</title>
+<style>
+  :root{
+    --teal:#25b6cf;
+    --ink:#555;
+    --soft:#f7f7f7;
+    --line:#b7b7b7;
+    --male:#e8eef8;
+    --female:#f8e7ea;
+    --paper:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:"Yu Gothic","Hiragino Kaku Gothic ProN",sans-serif;
+    color:#444;
+    background:#eef3f6;
+  }
+  .topbar{
+    position:sticky; top:0; z-index:5;
+    background:#fff; border-bottom:1px solid #d9e0e5;
+    padding:12px 18px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+  }
+  .topbar h1{font-size:20px; margin:0 10px 0 0; color:#3b4a54}
+  .tabs{display:flex; gap:8px; flex-wrap:wrap}
+  .tab{
+    border:1px solid #cbd6dd; background:#fff; color:#46535b;
+    border-radius:999px; padding:8px 14px; cursor:pointer; font-size:14px;
+  }
+  .tab.active{background:var(--teal); color:#fff; border-color:var(--teal)}
+  .actions{margin-left:auto; display:flex; gap:8px; flex-wrap:wrap}
+  button{
+    border:none; border-radius:10px; background:#3e7fa0; color:#fff;
+    padding:9px 14px; cursor:pointer; font-size:14px;
+  }
+  button.secondary{background:#7b8b96}
+  button.light{background:#fff; color:#4a5962; border:1px solid #ccd5db}
+  main{max-width:1160px; margin:22px auto; padding:0 16px 50px}
+  .page{
+    display:none; background:var(--paper); border-radius:22px; padding:30px 34px;
+    box-shadow:0 10px 28px rgba(45,78,97,.08); margin-bottom:18px;
+  }
+  .page.active{display:block}
+  .pageNo{text-align:center; color:#777; margin-top:24px; font-size:14px}
+  .titleRow{display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap}
+  .leadBubble{
+    display:inline-block; background:var(--teal); color:#fff; border-radius:999px;
+    padding:10px 22px; font-weight:700; font-size:32px; line-height:1;
+  }
+  .titleText{font-size:38px; color:#666; letter-spacing:.04em}
+.patientTitleRow{margin-bottom:12px; border-top:6px dotted #d6b3c5; padding-top:14px}
+  .patientPageTitle{font-size:28px; font-weight:700; letter-spacing:.05em; color:#444}
+  .sublead{margin:18px 0; line-height:1.9; font-size:15px}
+  .notice{font-size:13px; color:#666; line-height:1.8}
+  .sectionbox{
+    margin-top:16px; border:2px dashed #d4d4d4; border-radius:18px; padding:18px; background:#fcfcfc;
+  }
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:6px 0}
+  label{font-size:14px}
+  input, select{
+    border:1px solid #cbd5dc; border-radius:8px; padding:8px 10px; font-size:14px;
+    background:#fff; min-width:0;
+  }
+  input.small{width:90px}
+  input.mid{width:130px}
+  input.long{width:220px}
+  input.fill{width:100%}
+  .miniHead{font-weight:700; color:#555; margin-bottom:8px}
+  .rightCard{
+    border:1px solid #d9d9d9; border-radius:16px; padding:16px; background:#fff;
+  }
+  .metricTable{
+    display:grid; grid-template-columns:120px repeat(2,minmax(90px,1fr)); gap:8px; align-items:center;
+  }
+  .metricTable .th{font-weight:700; color:#666}
+  .metricTable .rlabel{font-weight:700; color:#666}
+  .graphPage.male{background:linear-gradient(#fff,#fff) padding-box, linear-gradient(180deg,#d6dff0,#ffffff) border-box}
+  .graphPage.female{background:linear-gradient(#fff,#fff) padding-box, linear-gradient(180deg,#f1d7dc,#ffffff) border-box}
+  .graphHeader{
+    margin-bottom:12px; border-top:6px dotted #d6b3c5; padding-top:14px;
+  }
+  .graphTitle{font-size:28px; font-weight:700; letter-spacing:.05em}
+  .graphLead{font-size:14px; line-height:1.8; margin:10px 0 14px}
+  .plotWrap{
+    border-radius:16px; padding:16px; border:1px solid #ddd; background:#fff;
+  }
+  svg{width:100%; height:auto; display:block; background:#fff}
+  .controlPanel{
+    display:grid; grid-template-columns:repeat(2,minmax(260px,1fr)); gap:16px; margin:16px 0 18px;
+  }
+  .eyeBox{
+    border:1px solid #d9dfe4; border-radius:14px; padding:14px; background:#fbfdff;
+  }
+  .eyeBox h4{margin:0 0 10px; font-size:16px}
+  .seriesRow{display:grid; grid-template-columns:80px 1fr 1fr; gap:8px; align-items:start; margin-bottom:10px}
+  .seriesRow div{font-size:13px}
+  .multiStack{display:grid; gap:6px}
+  .syncBox{margin-top:8px; padding:10px 12px; border:1px dashed #cbd5dc; border-radius:10px; background:#fcfdff}
+  .syncNote{font-size:12px; color:#6c7780; line-height:1.6}
+  .help{font-size:12px; color:#6c7780}
+  .legend{display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; font-size:13px}
+  .dot{display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px; vertical-align:middle}
+  .rxBox{
+    border:2px dashed #d8d0c6; border-radius:24px; padding:18px 18px 12px; background:#fbfaf8;
+  }
+  .rxTitle{
+    font-size:28px; font-weight:700; margin-bottom:12px; color:#6a604f;
+  }
+  .rxGrid{
+    display:grid; grid-template-columns:1fr 1fr; gap:18px;
+  }
+  .visitCard{
+    border:2px dotted #cfc8bc; border-radius:22px; padding:14px 16px; background:#f7f2ea;
+  }
+  .visitBadge{
+    width:34px; height:34px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+    font-weight:700; margin-bottom:8px; color:#574e42;
+  }
+  .fieldline{display:grid; grid-template-columns:88px 1fr; gap:8px; align-items:center; margin:6px 0}
+  .lifeList .row{margin:4px 0}
+  .lifeList .row span, .fieldline .row span{
+    font-size:13px; color:#666;
+  }
+  .footerNote{font-size:12px; color:#777; margin-top:10px}
+  .patientBox{
+    border:1px solid #d9d9d9; border-radius:16px; padding:16px; background:#fff; margin-bottom:16px;
+  }
+  .patientGrid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px}
+  .subtle{font-size:12px; color:#6c7780}
+  @media (max-width: 900px){
+    .grid2,.controlPanel,.rxGrid,.patientGrid{grid-template-columns:1fr}
+    .metricTable{grid-template-columns:90px 1fr 1fr}
+    .titleText{font-size:28px}
+    .leadBubble{font-size:24px}
+    .page{padding:22px 18px}
+  }
+
+  @media print{
+    @page{
+      size: A4 portrait;
+      margin: 10mm;
+    }
+    body{
+      background:#fff;
+    }
+    .topbar{
+      display:none !important;
+    }
+    .actions{
+      display:none;
+    }
+    .tabs{
+      gap:6px;
+    }
+    .tab{
+      padding:4px 10px;
+      font-size:11px;
+      border-radius:999px;
+    }
+    main{
+      max-width:none;
+      margin:0;
+      padding:0;
+    }
+    .page{
+      display:none !important;
+      box-shadow:none;
+      border:1px solid #ddd;
+      border-radius:10px;
+      margin:0 0 8mm 0;
+      padding:8mm;
+      break-inside:avoid;
+      page-break-inside:avoid;
+    }
+    .page.print-target{
+      display:block !important;
+    }
+    .grid2,.controlPanel,.rxGrid,.patientGrid{
+      gap:8px;
+    }
+    .sublead,.notice,.help,.subtle{
+      font-size:11px;
+      line-height:1.5;
+    }
+    .graphTitle,.patientPageTitle,.rxTitle{
+      font-size:20px;
+    }
+    .miniHead{
+      font-size:13px;
+    }
+    .titleText{
+      font-size:24px;
+    }
+    .leadBubble{
+      font-size:20px;
+      padding:6px 14px;
+    }
+    .sectionbox,.rightCard,.eyeBox,.patientBox,.rxBox,.visitCard,.plotWrap{
+      break-inside:avoid;
+      page-break-inside:avoid;
+    }
+    .visitCard{
+      padding:10px 12px;
+    }
+    label,input,select,button,.fieldline .row span,.lifeList .row span{
+      font-size:11px;
+    }
+    input,select{
+      padding:5px 7px;
+    }
+    input.small{
+      width:62px;
+    }
+    .fieldline{
+      grid-template-columns:72px 1fr;
+      gap:6px;
+      margin:4px 0;
+    }
+    .row{
+      gap:6px;
+      margin:3px 0;
+    }
+    .rxGrid{
+      grid-template-columns:1fr 1fr;
+    }
+    .metricTable{
+      grid-template-columns:95px repeat(2,minmax(70px,1fr));
+      gap:6px;
+    }
+    svg{
+      max-height:145mm;
+    }
+    .displayBox{
+      display:none !important;
+    }
+    .controlPanel{
+      grid-template-columns:1fr !important;
+    }
+    .plotWrap{
+      margin-top:4mm;
+    }
+  }
+
+</style>
+  <link rel="manifest" href="manifest.webmanifest" />
+</head>
+<body>
+  <div class="topbar">
+    <h1>視力の記録ノート HTML版</h1>
+    <div class="tabs">
+      <button class="tab active" data-page="p2">患者情報</button>
+      <button class="tab" data-page="p3">眼軸長の記録</button>
+      <button class="tab" data-page="p4">屈折度数の記録</button>
+      <button class="tab" data-page="p8">受診記録</button>
+    </div>
+    <div class="actions">
+      <button class="light" id="saveBtn">患者ごと保存</button>
+      <button class="light" id="loadBtn">患者データ読込</button>
+      <button class="secondary" id="exportBtn">JSON書出し</button>
+      <button class="secondary" id="exportHtmlBtn">HTML保存</button>
+      <button onclick="printCurrentPage()">印刷</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none">
+    </div>
+  </div>
+
+  <main>
+    <section id="p2" class="page active">
+      <div class="titleRow patientTitleRow">
+        <div class="patientPageTitle">患者情報</div>
+      </div>
+      <div class="sublead">
+        視力検査では、視力だけでなく、矯正に必要な近視の程度の測定も行っています。近視の程度は、
+        近視を完全に矯正することができるレンズ度数（屈折度数）で表し、単位はジオプトリー（D）です。
+        また、眼球の前後方向の長さを眼軸長といいます。
+      </div>
+
+      <div class="patientBox">
+        <div class="miniHead">患者情報</div>
+        <div class="patientGrid">
+          <div><label>患者名</label><input class="fill" data-store="patientName" placeholder="例：山田 太郎"></div>
+          <div><label>ID / カルテ番号</label><input class="fill" data-store="patientId" placeholder="例：12345"></div>
+          <div><label>メモ</label><input class="fill" data-store="patientMemo" placeholder="任意"></div>
+        </div>
+        <div class="subtle" style="margin-top:8px;">
+          「患者ごと保存」でブラウザ内保存、「JSON書出し」でデータ保存、「HTML保存」で入力内容入りの単体HTML保存ができます。
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="rightCard" style="grid-column:1 / -1;">
+          <div class="miniHead">検査結果</div>
+          <div class="metricTable">
+            <div></div><div class="th">右眼</div><div class="th">左眼</div>
+
+            <div class="rlabel">近視度数</div>
+            <input class="fill" data-store="myopiaRight" placeholder="-2.50">
+            <input class="fill" data-store="myopiaLeft" placeholder="-2.25">
+
+            <div class="rlabel">乱視度数</div>
+            <input class="fill" data-store="astigRight" placeholder="-0.50">
+            <input class="fill" data-store="astigLeft" placeholder="-0.75">
+
+            <div class="rlabel">眼軸長(mm)</div>
+            <input class="fill" data-store="axialRight" placeholder="24.35">
+            <input class="fill" data-store="axialLeft" placeholder="24.22">
+
+            <div class="rlabel">裸眼視力</div>
+            <input class="fill" data-store="vaUnaidedRight" placeholder="0.2">
+            <input class="fill" data-store="vaUnaidedLeft" placeholder="0.3">
+
+            <div class="rlabel">矯正視力</div>
+            <input class="fill" data-store="vaCorrectedRight" placeholder="1.2">
+            <input class="fill" data-store="vaCorrectedLeft" placeholder="1.2">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="p3" class="page graphPage male">
+      <div class="graphHeader">
+        <div class="graphTitle">眼軸長の記録</div>
+        <div class="graphLead">
+          眼軸長伸展の参考曲線を目安にしながら、眼軸長の測定データを記録できます。左右眼の値を入力するとグラフに反映されます。
+        </div>
+      </div>
+      <div class="controlPanel">
+        <div class="eyeBox">
+          <h4>眼軸長の入力</h4>
+          <div id="axialInputs"></div>
+          <div class="help">学年ごとの値を入力してください。同じ学年に複数入力した場合は、1回目を学年ライン上、以降は補助目盛に合わせて横並びに表示されます。</div>
+          <div class="syncBox"><div class="row"><button type="button" class="light" onclick="syncAxialFromVisits()">追加反映</button><button type="button" class="light" onclick="syncAxialFromVisitsOverwrite()">上書き反映</button></div><div class="syncNote">受診記録の年齢から学年を推定して、眼軸長データへ転記します。年齢は 6〜14 才を想定しています。</div></div>
+        </div>
+        <div class="eyeBox displayBox">
+          <h4>表示</h4>
+          <div class="row"><label>性別表示</label>
+            <select id="sexSelect">
+              <option value="male">男子</option>
+              <option value="female">女子</option>
+            </select>
+          </div>
+          <div class="legend">
+            <span><span class="dot" style="background:#c93a3a"></span>右眼</span>
+            <span><span class="dot" style="background:#2f63c9"></span>左眼</span>
+            <span>参考曲線：10 / 25 / 50 / 75 / 90th</span>
+          </div>
+        </div>
+      </div>
+      <div class="plotWrap">
+        <div class="miniHead">眼軸長の記録</div>
+        <svg id="axialChart" viewBox="0 0 940 520" aria-label="眼軸長グラフ"></svg>
+      </div>
+      <div class="footerNote">参考線はPDF画像を見ながら、各学年ごとに0.1mm単位を意識して最終微調整しています。男子90thは中3で約26.2mm、女子90thは中3で約25.8mmです。</div>
+    </section>
+
+    <section id="p4" class="page graphPage male">
+      <div class="graphHeader">
+        <div class="graphTitle">屈折度数の記録</div>
+        <div class="graphLead">
+          屈折度数の変化を記録することで、ご自身の近視の進行度をみることができます。
+        </div>
+      </div>
+      <div class="controlPanel">
+        <div class="eyeBox">
+          <h4>屈折度数の入力</h4>
+          <div id="refractionInputs"></div>
+          <div class="help">マイナス値で入力してください。例：-1.25。同じ学年に複数入力した場合は、1回目を学年ライン上、以降は補助目盛に合わせて横並びに表示されます。</div>
+          <div class="syncBox"><div class="row"><button type="button" class="light" onclick="syncRefractionFromVisits()">追加反映</button><button type="button" class="light" onclick="syncRefractionFromVisitsOverwrite()">上書き反映</button></div><div class="syncNote">受診記録の年齢から学年を推定して、屈折度数データへ転記します。年齢は 6〜14 才を想定しています。</div></div>
+        </div>
+        <div class="eyeBox displayBox">
+          <h4>表示</h4>
+          <div class="row"><label>性別表示</label>
+            <select id="sexSelect2">
+              <option value="male">男子</option>
+              <option value="female">女子</option>
+            </select>
+          </div>
+          <div class="legend">
+            <span><span class="dot" style="background:#c93a3a"></span>右眼</span>
+            <span><span class="dot" style="background:#2f63c9"></span>左眼</span>
+          </div>
+        </div>
+      </div>
+      <div class="plotWrap">
+        <div class="miniHead">屈折度数の記録</div>
+        <svg id="refChart" viewBox="0 0 940 520" aria-label="屈折度数グラフ"></svg>
+      </div>
+    </section>
+
+    <section id="p8" class="page">
+      <div class="rxBox">
+        <div class="rxTitle">受診記録</div>
+        <div class="notice">
+          診察後に、視力、度数、眼軸長のデータを記入してもらいましょう。来院ごとにこの「受診記録」に記入していきましょう。年齢を入れると、眼軸長・屈折度数の記録ページへ反映できます。
+        </div>
+        <div class="rxGrid" id="visitGrid"></div>
+      </div>
+    </section>
+  </main>
+
+<script>
+const gradeLabels = ['小1','小2','小3','小4','小5','小6','中1','中2','中3'];
+const xPositions = [80,170,260,350,440,530,650,740,830];
+const visitColors = ['#dad27e','#b1a593','#8ccfd4','#bcd5c2','#e299a8','#f0b889','#d7d070','#a79b8a','#87cbd2','#a5c5b2','#dd8f9e','#efb47d','#c9c25f','#9e9385'];
+const storagePrefix = 'myopia_record_patient_';
+const embeddedInitialData = null;
+
+function buildSeriesInputs(targetId, prefix, repeatCount){
+  const wrap = document.getElementById(targetId);
+  let html = '';
+  gradeLabels.forEach((g,i)=>{
+    let rightHtml = '<div class="multiStack">';
+    let leftHtml = '<div class="multiStack">';
+    for(let k=1;k<=repeatCount;k++){
+      rightHtml += `<input data-store="${prefix}_r_${i}_${k}" placeholder="右眼 ${k}">`;
+      leftHtml += `<input data-store="${prefix}_l_${i}_${k}" placeholder="左眼 ${k}">`;
+    }
+    rightHtml += '</div>';
+    leftHtml += '</div>';
+    html += `<div class="seriesRow">
+      <div>${g}</div>
+      ${rightHtml}
+      ${leftHtml}
+    </div>`;
+  });
+  wrap.innerHTML = html;
+}
+buildSeriesInputs('axialInputs','axialSeries',2);
+buildSeriesInputs('refractionInputs','refSeries',4);
+
+function buildVisitCards(){
+  const wrap = document.getElementById('visitGrid');
+  let html = '';
+  for(let n=1;n<=14;n++){
+    const c = visitColors[n-1] || '#ccc';
+    html += `
+      <div class="visitCard">
+        <div class="visitBadge" style="background:${c}">${n}</div>
+        <div class="fieldline"><label>受診日</label><div class="row">
+          <input class="small" data-store="visit${n}_year" placeholder="年">
+          <input class="small" data-store="visit${n}_month" placeholder="月">
+          <input class="small" data-store="visit${n}_day" placeholder="日">
+          <input class="small" data-store="visit${n}_age" placeholder="才">
+        </div></div>
+        <div class="fieldline"><label>視力 右</label><div class="row">
+          <input class="small" data-store="visit${n}_r_va_naked" placeholder="裸眼">
+          <input class="small" data-store="visit${n}_r_va_corr" placeholder="矯正">
+        </div></div>
+        <div class="fieldline"><label>視力 左</label><div class="row">
+          <input class="small" data-store="visit${n}_l_va_naked" placeholder="裸眼">
+          <input class="small" data-store="visit${n}_l_va_corr" placeholder="矯正">
+        </div></div>
+        <div class="fieldline"><label>度数 右</label><div class="row">
+          <input class="small" data-store="visit${n}_r_myopia" placeholder="近視"> <span>D</span>
+          <input class="small" data-store="visit${n}_r_astig" placeholder="乱視"> <span>D</span>
+        </div></div>
+        <div class="fieldline"><label>度数 左</label><div class="row">
+          <input class="small" data-store="visit${n}_l_myopia" placeholder="近視"> <span>D</span>
+          <input class="small" data-store="visit${n}_l_astig" placeholder="乱視"> <span>D</span>
+        </div></div>
+        <div class="fieldline"><label>眼軸長</label><div class="row">
+          <input class="small" data-store="visit${n}_r_axial" placeholder="右"> <span>mm</span>
+          <input class="small" data-store="visit${n}_l_axial" placeholder="左"> <span>mm</span>
+        </div></div>
+        <div class="lifeList">
+          <div class="row"><label>屋外活動</label><input class="small" data-store="visit${n}_outdoor" placeholder="数値"><span>時間/週</span></div>
+          <div class="row"><label>書字・読書</label><input class="small" data-store="visit${n}_book_h" placeholder="数値"><span>時間/日</span><input class="small" data-store="visit${n}_book_cm" placeholder="数値"><span>cm</span></div>
+          <div class="row"><label>スマホ・タブレット</label><input class="small" data-store="visit${n}_phone_h" placeholder="数値"><span>時間/日</span><input class="small" data-store="visit${n}_phone_cm" placeholder="数値"><span>cm</span></div>
+          <div class="row"><label>コンピューター</label><input class="small" data-store="visit${n}_pc_h" placeholder="数値"><span>時間/日</span><input class="small" data-store="visit${n}_pc_cm" placeholder="数値"><span>cm</span></div>
+          <div class="row"><label>夜寝る時間</label>
+            <select class="small" data-store="visit${n}_sleep_ampm">
+              <option value=""></option>
+              <option value="午後">午後</option>
+              <option value="午前">午前</option>
+            </select>
+            <input class="small" data-store="visit${n}_sleep_time" placeholder="数値"><span>時頃</span>
+          </div>
+        </div>
+      </div>`;
+  }
+  wrap.innerHTML = html;
+}
+buildVisitCards();
+
+function qs(sel){ return document.querySelector(sel); }
+
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.page).classList.add('active');
+  });
+});
+
+// PDF画像の見た目を元に再調整した近似線
+const defaultMaleCurves = {
+  p10:[22.2,22.3,22.6,22.7,22.9,22.9,23.1,23.2,23.3],
+  p25:[22.6,22.8,23.0,23.1,23.3,23.4,23.6,23.7,23.9],
+  p50:[23.1,23.3,23.5,23.7,23.9,24.0,24.2,24.3,24.6],
+  p75:[23.6,23.8,24.0,24.3,24.5,24.7,25.0,25.2,25.4],
+  p90:[24.2,24.3,24.5,25.0,25.5,25.8,26.0,26.1,26.2]
+};
+const defaultFemaleCurves = {
+  p10:[21.7,21.7,22.1,22.2,22.4,22.4,22.6,22.7,22.8],
+  p25:[22.0,22.3,22.4,22.7,22.8,23.0,23.1,23.2,23.3],
+  p50:[22.5,22.7,23.0,23.3,23.4,23.6,23.8,23.9,24.1],
+  p75:[23.1,23.2,23.4,23.8,24.1,24.2,24.7,24.7,25.0],
+  p90:[23.9,23.7,23.9,24.4,24.7,25.1,25.5,25.6,25.8]
+};
+
+function getPatientKey(){
+  const name = (document.querySelector('[data-store="patientName"]').value || '').trim();
+  const id = (document.querySelector('[data-store="patientId"]').value || '').trim();
+  const base = (id || name).replace(/[^\w\-ぁ-んァ-ヶ一-龠]/g,'_');
+  return base ? storagePrefix + base : null;
+}
+function getFileBaseName(){
+  const name = (document.querySelector('[data-store="patientName"]').value || 'patient').trim();
+  const id = (document.querySelector('[data-store="patientId"]').value || '').trim();
+  const safe = (id ? `${name}_${id}` : name).replace(/[^\w\-ぁ-んァ-ヶ一-龠]/g,'_');
+  return safe || 'patient';
+}
+
+function getData(){
+  const data = {};
+  document.querySelectorAll('[data-store]').forEach(el=>data[el.dataset.store]=el.value);
+  data.sexSelect = document.getElementById('sexSelect').value;
+  data.sexSelect2 = document.getElementById('sexSelect2').value;
+  return data;
+}
+function setData(data){
+  document.querySelectorAll('[data-store]').forEach(el=>{
+    if(data[el.dataset.store] !== undefined) el.value = data[el.dataset.store];
+  });
+  if(data.sexSelect) document.getElementById('sexSelect').value = data.sexSelect;
+  if(data.sexSelect2) document.getElementById('sexSelect2').value = data.sexSelect2;
+  repaintAll();
+}
+function saveLocal(){
+  const key = getPatientKey();
+  if(!key){
+    alert('患者名 または ID / カルテ番号 を入力してください');
+    return;
+  }
+  localStorage.setItem(key, JSON.stringify(getData()));
+  alert('この端末のブラウザに患者ごと保存しました');
+}
+function loadByFile(){
+  document.getElementById('fileInput').click();
+}
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(getData(),null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = getFileBaseName() + '_myopia_record.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+async function exportHTML(){
+  const data = getData();
+  let htmlText = document.documentElement.outerHTML;
+  htmlText = '<!DOCTYPE html>\n' + htmlText.replace(
+    'const embeddedInitialData = null;',
+    'const embeddedInitialData = ' + JSON.stringify(data, null, 2) + ';'
+  );
+  const suggestedName = getFileBaseName() + '_myopia_record.html';
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: [{
+          description: 'HTML files',
+          accept: {'text/html': ['.html']}
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(htmlText);
+      await writable.close();
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+    }
+  }
+  const blob = new Blob([htmlText], {type:'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = suggestedName;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+document.getElementById('saveBtn').onclick = saveLocal;
+document.getElementById('loadBtn').onclick = loadByFile;
+document.getElementById('exportBtn').onclick = exportJSON;
+document.getElementById('exportHtmlBtn').onclick = () => exportHTML();
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=> {
+    try { setData(JSON.parse(reader.result)); }
+    catch(e){ alert('JSONを読み込めませんでした'); }
+  };
+  reader.readAsText(file);
+});
+
+document.addEventListener('input', repaintAll);
+document.getElementById('sexSelect').addEventListener('change',()=>{
+  document.getElementById('sexSelect2').value = document.getElementById('sexSelect').value;
+  repaintAll();
+});
+document.getElementById('sexSelect2').addEventListener('change',()=>{
+  document.getElementById('sexSelect').value = document.getElementById('sexSelect2').value;
+  repaintAll();
+});
+
+function num(v){ const n = parseFloat(v); return Number.isFinite(n) ? n : null; }
+function yScaleAxial(v){ return 460 - ((v - 21) / 7) * 390; }
+function yScaleRef(v){ return 60 + ((1 - v) / 11) * 400; }
+function getSubX(i, k, maxCount){
+  const base = xPositions[i];
+  const next = i < xPositions.length - 1 ? xPositions[i+1] : xPositions[i] + (xPositions[i] - xPositions[i-1]);
+  const q1 = base + (next - base) * 0.25;
+  const q2 = base + (next - base) * 0.50;
+  const q3 = base + (next - base) * 0.75;
+
+  if(maxCount === 2){
+    // 1回目: 学年ライン上、2回目: 補助目盛2番目(中央)
+    return k === 1 ? base : q2;
+  }
+  if(maxCount === 4){
+    // 1回目: 学年ライン上、2〜4回目: 補助目盛に合わせる
+    if(k === 1) return base;
+    if(k === 2) return q1;
+    if(k === 3) return q2;
+    return q3;
+  }
+  return base;
+}
+function polyline(points, color, width=2, dash=''){
+  return `<polyline fill="none" stroke="${color}" stroke-width="${width}" ${dash?`stroke-dasharray="${dash}"`:''} points="${points.map(p=>p.join(',')).join(' ')}"/>`;
+}
+function circle(cx,cy,color){
+  return `<circle cx="${cx}" cy="${cy}" r="4.8" fill="${color}" stroke="#fff" stroke-width="1.2"/>`;
+}
+function drawGrid(yValues, yFunc, unit, title, bgColor){
+  let s = '';
+  s += `<rect x="50" y="40" width="820" height="420" fill="${bgColor}" opacity="0.42"/>`;
+  for(let i=0;i<gradeLabels.length;i++){
+    const x = xPositions[i];
+    s += `<line x1="${x}" y1="40" x2="${x}" y2="460" stroke="#8a8a8a" stroke-width="${(i===5||i===8)?1.5:1}"/>`;
+    if(i<gradeLabels.length-1){
+      const next = xPositions[i+1];
+      for(let k=1;k<4;k++){
+        const mx = x + (next-x)*k/4;
+        s += `<line x1="${mx}" y1="40" x2="${mx}" y2="460" stroke="#c7c7c7" stroke-width="0.7"/>`;
+      }
+    }
+    s += `<text x="${x}" y="488" font-size="13" text-anchor="middle" fill="#555">${gradeLabels[i]}</text>`;
+  }
+  yValues.forEach(v=>{
+    const y = yFunc(v);
+    s += `<line x1="50" y1="${y}" x2="870" y2="${y}" stroke="#888" stroke-width="1"/>`;
+    s += `<text x="38" y="${y+4}" font-size="13" text-anchor="end" fill="#555">${v.toFixed ? v.toFixed(0) : v}</text>`;
+  });
+  for(let i=0;i<yValues.length-1;i++){
+    const a = yFunc(yValues[i]), b = yFunc(yValues[i+1]);
+    for(let k=1;k<5;k++){
+      const my = a + (b-a)*k/5;
+      s += `<line x1="50" y1="${my}" x2="870" y2="${my}" stroke="#d2d2d2" stroke-width="0.6"/>`;
+    }
+  }
+  s += `<line x1="50" y1="460" x2="870" y2="460" stroke="#555" stroke-width="1.2"/>`;
+  s += `<line x1="50" y1="40" x2="50" y2="460" stroke="#555" stroke-width="1.2"/>`;
+  s += `<text x="20" y="55" font-size="14" fill="#555">(${unit})</text>`;
+  s += `<text x="460" y="26" font-size="22" text-anchor="middle" fill="#444" font-weight="700">${title}</text>`;
+  s += `<text x="305" y="510" font-size="15" text-anchor="middle" fill="#555">小学生</text>`;
+  s += `<text x="740" y="510" font-size="15" text-anchor="middle" fill="#555">中学生</text>`;
+  return s;
+}
+function drawAxial(){
+  const svg = document.getElementById('axialChart');
+  const sex = document.getElementById('sexSelect').value;
+  const curves = sex === 'female' ? defaultFemaleCurves : defaultMaleCurves;
+  const bg = sex === 'female' ? '#f6dde3' : '#dfe8f7';
+  let s = drawGrid([21,22,23,24,25,26,27,28],yScaleAxial,'mm','眼軸長の記録',bg);
+  const names = [['p90','90th'],['p75','75th'],['p50','50th'],['p25','25th'],['p10','10th']];
+  names.forEach(([k,label])=>{
+    const pts = curves[k].map((v,i)=>[xPositions[i], yScaleAxial(v)]);
+    s += polyline(pts,'#555',2);
+    const last = pts[pts.length-1];
+    s += `<text x="${last[0]+16}" y="${last[1]+4}" font-size="13" fill="#555">${label}</text>`;
+  });
+  const rightPts = [], leftPts = [];
+  const rightScatter = [], leftScatter = [];
+  for(let i=0;i<gradeLabels.length;i++){
+    for(let k=1;k<=2;k++){
+      const rEl = document.querySelector(`[data-store="axialSeries_r_${i}_${k}"]`);
+      const lEl = document.querySelector(`[data-store="axialSeries_l_${i}_${k}"]`);
+      const rv = rEl ? num(rEl.value) : null;
+      const lv = lEl ? num(lEl.value) : null;
+      const x = getSubX(i, k, 2);
+      if(rv!==null){
+        rightPts.push([x, yScaleAxial(rv)]);
+        rightScatter.push([x, yScaleAxial(rv)]);
+      }
+      if(lv!==null){
+        leftPts.push([x, yScaleAxial(lv)]);
+        leftScatter.push([x, yScaleAxial(lv)]);
+      }
+    }
+  }
+  if(rightPts.length>1){ s += polyline(rightPts,'#c93a3a',2.6,'6 4'); }
+  rightScatter.forEach(p=>s+=circle(p[0],p[1],'#c93a3a'));
+  if(leftPts.length>1){ s += polyline(leftPts,'#2f63c9',2.6,'6 4'); }
+  leftScatter.forEach(p=>s+=circle(p[0],p[1],'#2f63c9'));
+  svg.innerHTML = s;
+  document.getElementById('p3').classList.toggle('female', sex==='female');
+  document.getElementById('p3').classList.toggle('male', sex!=='female');
+  document.querySelector('#p3 .graphTitle').textContent = '眼軸長の記録';
+}
+function drawRef(){
+  const svg = document.getElementById('refChart');
+  const sex = document.getElementById('sexSelect2').value;
+  const bg = sex === 'female' ? '#f6dde3' : '#dfe8f7';
+  let s = drawGrid([1,0,-1,-2,-3,-4,-5,-6,-7,-8,-9,-10],yScaleRef,'D','屈折度数の記録',bg);
+  const rightPts = [], leftPts = [];
+  const rightScatter = [], leftScatter = [];
+  for(let i=0;i<gradeLabels.length;i++){
+    for(let k=1;k<=4;k++){
+      const rEl = document.querySelector(`[data-store="refSeries_r_${i}_${k}"]`);
+      const lEl = document.querySelector(`[data-store="refSeries_l_${i}_${k}"]`);
+      const rv = rEl ? num(rEl.value) : null;
+      const lv = lEl ? num(lEl.value) : null;
+      const x = getSubX(i, k, 4);
+      if(rv!==null){
+        rightPts.push([x, yScaleRef(rv)]);
+        rightScatter.push([x, yScaleRef(rv)]);
+      }
+      if(lv!==null){
+        leftPts.push([x, yScaleRef(lv)]);
+        leftScatter.push([x, yScaleRef(lv)]);
+      }
+    }
+  }
+  if(rightPts.length>1){ s += polyline(rightPts,'#c93a3a',2.6,'6 4'); }
+  rightScatter.forEach(p=>s+=circle(p[0],p[1],'#c93a3a'));
+  if(leftPts.length>1){ s += polyline(leftPts,'#2f63c9',2.6,'6 4'); }
+  leftScatter.forEach(p=>s+=circle(p[0],p[1],'#2f63c9'));
+  svg.innerHTML = s;
+  document.getElementById('p4').classList.toggle('female', sex==='female');
+  document.getElementById('p4').classList.toggle('male', sex!=='female');
+}
+function ageToGradeIndex(age){
+  const raw = String(age ?? '').trim().replace(/[^0-9.]/g,'');
+  const a = parseFloat(raw);
+  if(!Number.isFinite(a)) return null;
+  const idx = Math.round(a - 6);
+  if(idx < 0 || idx > 8) return null;
+  return idx;
+}
+function setFirstEmpty(prefix, side, gradeIdx, maxCount, value){
+  const val = String(value ?? '').trim();
+  if(!val) return false;
+  for(let k=1;k<=maxCount;k++){
+    const el = document.querySelector(`[data-store="${prefix}_${side}_${gradeIdx}_${k}"]`);
+    if(el && !String(el.value || '').trim()){
+      el.value = val;
+      return true;
+    }
+  }
+  return false;
+}
+function clearSeries(prefix, maxCount){
+  for(let i=0;i<gradeLabels.length;i++){
+    for(let k=1;k<=maxCount;k++){
+      const r = document.querySelector(`[data-store="${prefix}_r_${i}_${k}"]`);
+      const l = document.querySelector(`[data-store="${prefix}_l_${i}_${k}"]`);
+      if(r) r.value = '';
+      if(l) l.value = '';
+    }
+  }
+}
+function syncAxialFromVisits(){
+  let count = 0;
+  for(let n=1;n<=14;n++){
+    const ageEl = document.querySelector(`[data-store="visit${n}_age"]`);
+    const gradeIdx = ageToGradeIndex(ageEl ? ageEl.value : '');
+    if(gradeIdx === null) continue;
+    const rEl = document.querySelector(`[data-store="visit${n}_r_axial"]`);
+    const lEl = document.querySelector(`[data-store="visit${n}_l_axial"]`);
+    const rv = rEl ? String(rEl.value || '').trim() : '';
+    const lv = lEl ? String(lEl.value || '').trim() : '';
+    if(rv) count += setFirstEmpty('axialSeries','r',gradeIdx,2,rv) ? 1 : 0;
+    if(lv) count += setFirstEmpty('axialSeries','l',gradeIdx,2,lv) ? 1 : 0;
+  }
+  repaintAll();
+  alert(count > 0 ? `眼軸長データを ${count} 件反映しました` : '反映できる眼軸長データがありませんでした。受診記録の年齢と眼軸長を確認してください。');
+}
+function syncRefractionFromVisits(){
+  let count = 0;
+  for(let n=1;n<=14;n++){
+    const ageEl = document.querySelector(`[data-store="visit${n}_age"]`);
+    const gradeIdx = ageToGradeIndex(ageEl ? ageEl.value : '');
+    if(gradeIdx === null) continue;
+    const rEl = document.querySelector(`[data-store="visit${n}_r_myopia"]`);
+    const lEl = document.querySelector(`[data-store="visit${n}_l_myopia"]`);
+    const rv = rEl ? String(rEl.value || '').trim() : '';
+    const lv = lEl ? String(lEl.value || '').trim() : '';
+    if(rv) count += setFirstEmpty('refSeries','r',gradeIdx,4,rv) ? 1 : 0;
+    if(lv) count += setFirstEmpty('refSeries','l',gradeIdx,4,lv) ? 1 : 0;
+  }
+  repaintAll();
+  alert(count > 0 ? `近視度数データを ${count} 件反映しました` : '反映できる近視度数データがありませんでした。受診記録の年齢と近視度数を確認してください。');
+}
+function syncAxialFromVisitsOverwrite(){
+  clearSeries('axialSeries',2);
+  syncAxialFromVisits();
+}
+function syncRefractionFromVisitsOverwrite(){
+  clearSeries('refSeries',4);
+  syncRefractionFromVisits();
+}
+
+function printCurrentPage(){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('print-target'));
+  const current = document.querySelector('.page.active') || document.getElementById('p2');
+  current.classList.add('print-target');
+  window.print();
+}
+window.addEventListener('afterprint', ()=>{
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('print-target'));
+});
+
+function repaintAll(){ drawAxial(); drawRef(); }
+repaintAll();
+if (embeddedInitialData) {
+  setData(embeddedInitialData);
+}
+</script>
+</body>
+</html>
