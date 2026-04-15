@@ -1,9 +1,0 @@
-{
-  "name": "視力の記録ノート",
-  "short_name": "視力記録",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#25b6cf",
-  "icons": []
-}
