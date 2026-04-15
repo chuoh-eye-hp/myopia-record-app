@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>宮崎中央眼科病院 近視進行予測ツール</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --sub: #475569;
+      --line: #cbd5e1;
+      --accent: #2563eb;
+      --stop: #ea580c;
+      --warn-bg: #fff7ed;
+      --warn-border: #fed7aa;
+      --warn-text: #9a3412;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 20px; }
+    .hero { text-align: center; margin-bottom: 20px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--line);
+      border-radius: 999px; padding: 10px 16px; font-size: 14px; box-shadow: var(--shadow);
+    }
+    h1 { font-size: clamp(28px, 4vw, 40px); margin: 14px 0 8px; }
+    .lead {
+      max-width: 980px; margin: 0 auto; color: var(--sub); line-height: 1.8; font-size: 15px;
+    }
+    .card {
+      background: var(--card); border: 1px solid #e2e8f0; border-radius: var(--radius); box-shadow: var(--shadow);
+    }
+    .controls { padding: 20px; margin: 24px 0; }
+    .controls-head {
+      display: flex; gap: 12px; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 18px;
+    }
+    .controls-title { font-size: 22px; font-weight: 700; }
+    .button-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    button {
+      appearance: none; border: 1px solid #cbd5e1; background: white; color: var(--text); border-radius: 16px;
+      padding: 14px 18px; font-size: 16px; font-weight: 600; min-height: 52px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button.primary, .year-preset.active, .preview-tab.active, .curve-preset.active {
+      background: var(--accent); color: white; border-color: var(--accent);
+    }
+
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+    .field { display: flex; flex-direction: column; gap: 8px; }
+    .field label { font-size: 14px; font-weight: 700; color: var(--sub); }
+    .field input {
+      width: 100%; min-height: 52px; border: 1px solid var(--line); border-radius: 16px;
+      padding: 12px 14px; font-size: 18px; background: #fff; appearance: none;
+    }
+
+    .info-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+    .note { border-radius: 18px; padding: 14px 16px; font-size: 14px; line-height: 1.7; background: #f8fafc; color: var(--sub); }
+    .saved {
+      margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: #f8fafc;
+      font-size: 14px; font-weight: 600; color: var(--sub); display: none;
+    }
+
+    .preview-shell { max-width: 980px; margin: 0 auto; }
+    .preview-tabs { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 0 0 14px; }
+    .preview-tab {
+      border: 1px solid var(--line); background: white; color: var(--text); border-radius: 999px;
+      padding: 10px 14px; font-size: 14px; font-weight: 700; cursor: pointer; min-height: 44px;
+    }
+    .swipe-hint { text-align: center; color: var(--sub); font-size: 13px; margin-bottom: 10px; }
+    .preview-grid {
+      display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+      gap: 0; border-radius: 28px; scrollbar-width: none;
+    }
+    .preview-grid::-webkit-scrollbar { display: none; }
+    .preview-page { min-width: 100%; width: 100%; flex: 0 0 100%; scroll-snap-align: start; }
+    .preview { overflow: hidden; }
+    .preview-head {
+      display: flex; justify-content: space-between; gap: 12px; align-items: center;
+      padding: 18px 18px 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+    }
+    .preview-badge {
+      padding: 8px 12px; border-radius: 999px; background: #e2e8f0; font-size: 12px; font-weight: 700; white-space: nowrap;
+    }
+    .preview-body { padding: 18px; display: grid; gap: 16px; }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .metric { border: 1px solid #e2e8f0; border-radius: 18px; padding: 14px; background: white; }
+    .metric .label { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
+    .metric .value { font-size: 24px; font-weight: 800; }
+    .metric .subvalue { font-size: 15px; font-weight: 700; margin-top: 4px; }
+
+    .section { border: 1px solid #e2e8f0; border-radius: 18px; padding: 16px; background: white; }
+    .section-title { font-size: 14px; font-weight: 800; margin-bottom: 8px; }
+    .section p { margin: 0; line-height: 1.8; color: var(--sub); font-size: 14px; }
+
+    .impact-box { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 12px; }
+    .impact-main {
+      border: 1px solid #fecaca; background: linear-gradient(180deg, #fff1f2 0%, #ffffff 100%);
+      color: #881337; border-radius: 18px; padding: 16px;
+    }
+    .impact-main .title, .impact-side .title { font-size: 13px; font-weight: 800; margin-bottom: 8px; }
+    .impact-main .big { font-size: 34px; font-weight: 900; line-height: 1.1; margin-bottom: 8px; }
+    .impact-main .sub { font-size: 14px; line-height: 1.7; color: #9f1239; }
+    .impact-side {
+      border: 1px solid #bfdbfe; background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+      color: #1d4ed8; border-radius: 18px; padding: 16px;
+    }
+    .impact-side .big { font-size: 22px; font-weight: 900; line-height: 1.3; margin-bottom: 8px; }
+    .impact-side .sub { font-size: 13px; line-height: 1.7; color: #1e40af; }
+
+    .graph-message {
+      margin: 0 0 10px; padding: 12px 14px; border-radius: 16px; background: #f8fafc; color: var(--sub);
+      font-size: 14px; line-height: 1.8;
+    }
+    .graph-message strong { color: var(--text); }
+
+    .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .legend span {
+      border: 1px solid #dbeafe; padding: 8px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 700; background: #f8fafc;
+    }
+    .legend .stop-line { background: #fff7ed; color: #c2410c; border-color: #fdba74; }
+
+    .graph-wrap {
+      width: 100%; min-height: 320px; border-radius: 18px; background: linear-gradient(to bottom, #ffffff, #f8fafc);
+      border: 1px solid #e2e8f0; overflow: hidden;
+    }
+    .graph-wrap svg { display: block; width: 100%; height: 320px; }
+    .inner-graph-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 12px; }
+    .inner-graph-tab {
+      border: 1px solid var(--line); background: white; color: var(--text); border-radius: 999px;
+      padding: 10px 14px; font-size: 13px; font-weight: 700; cursor: pointer; min-height: 40px;
+    }
+    .inner-graph-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .graph-panel { display:none; }
+    .graph-panel.active { display:block; }
+
+    .warn-box {
+      display: block; border-radius: 18px; background: var(--warn-bg); border: 1px solid var(--warn-border);
+      color: var(--warn-text); padding: 14px 16px; font-size: 14px; line-height: 1.8; font-weight: 700;
+    }
+
+    @media (max-width: 1180px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 820px) {
+      .grid, .metric-grid, .info-grid, .impact-box { grid-template-columns: 1fr; }
+      .wrap { padding: 14px; }
+      .controls, .preview-body { padding: 14px; }
+      .preview-head { padding: 14px; }
+      .preview-tab, .curve-preset { flex: 1 1 auto; }
+      .graph-wrap svg { height: 300px; }
+    }
+    @media print {
+      body { background: white; }
+      .wrap { max-width: none; padding: 0; }
+      .controls { display: none; }
+      .card { box-shadow: none; }
+      .preview-tabs, .swipe-hint { display: none; }
+      .preview-grid { display: block; overflow: visible; }
+      .preview-page { width: 100%; min-width: auto; page-break-after: always; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="pill" id="heroHospital">宮崎中央眼科病院 近視進行予測</div>
+      <h1>リジュセアミニ点眼治療・オルソケラトロジー・マイサイト・併用治療の近視進行予測</h1>
+      <p class="lead"><strong>予測は目安です。効果には個人差があります。</strong> この画面は、現在の年齢・度数・眼軸長・これまでの進み方から、今後どのように近視が進む可能性があるかを分かりやすく見るための説明用画面です。黒い線は治療をしない場合、青い線は治療を続けた場合、オレンジの線は途中で中断した場合の目安です。ご本人の経過や治療の継続状況、中断時期によって変化の仕方は異なるため、定期受診で確認していくことが大切です。</p>
+    </div>
+
+    <div class="card controls">
+      <div class="controls-head">
+        <div class="controls-title">患者データ入力</div>
+        <div class="button-row">
+          <button class="primary" id="saveBtn">保存</button>
+          <button id="resetBtn">初期化</button>
+          <button id="printBtn">印刷 / PDF</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="field"><label for="hospital">病院名</label><input id="hospital" type="text" /></div>
+        <div class="field"><label for="patientName">患者名</label><input id="patientName" type="text" placeholder="未入力でも可" /></div>
+        <div class="field"><label for="age">現在年齢</label><input id="age" type="number" step="1" min="1" max="40" /></div>
+        <div class="field"><label for="rightNow">右眼度数（D）</label><input id="rightNow" type="number" step="0.01" /></div>
+        <div class="field"><label for="leftNow">左眼度数（D）</label><input id="leftNow" type="number" step="0.01" /></div>
+        <div class="field"><label for="rightYearlyProgress">右眼 現在の年間進行量（D/年）</label><input id="rightYearlyProgress" type="number" step="0.01" /></div>
+        <div class="field"><label for="leftYearlyProgress">左眼 現在の年間進行量（D/年）</label><input id="leftYearlyProgress" type="number" step="0.01" /></div>
+        <div class="field"><label for="rightAxial">右眼 眼軸長（mm）</label><input id="rightAxial" type="number" step="0.01" /></div>
+        <div class="field"><label for="leftAxial">左眼 眼軸長（mm）</label><input id="leftAxial" type="number" step="0.01" /></div>
+        <div class="field"><label for="rightAxialYearly">右眼 年間眼軸伸展量（mm/年）</label><input id="rightAxialYearly" type="number" step="0.01" /></div>
+        <div class="field"><label for="leftAxialYearly">左眼 年間眼軸伸展量（mm/年）</label><input id="leftAxialYearly" type="number" step="0.01" /></div>
+        <div class="field"><label for="txEffectLow">治療効果 下限（%）</label><input id="txEffectLow" type="number" step="1" /></div>
+        <div class="field"><label for="txEffectHigh">治療効果 上限（%）</label><input id="txEffectHigh" type="number" step="1" /></div>
+        <div class="field"><label for="forecastYears">何年後まで表示するか</label><input id="forecastYears" type="number" step="1" min="1" max="20" /></div>
+        <div class="field"><label for="stopYear">何年後に中断するか（0で中断線なし）</label><input id="stopYear" type="number" step="0.5" min="0" max="20" /></div>
+        <div class="field"><label for="reboundExtra">中断直後の上乗せ進行量（D/年）</label><input id="reboundExtra" type="number" step="0.05" min="0" max="2" /></div>
+        <div class="field"><label for="axialReboundExtra">中断直後の上乗せ眼軸伸展量（mm/年）</label><input id="axialReboundExtra" type="number" step="0.01" min="0" max="1" /></div>
+      </div>
+
+      <div class="button-row" style="margin-top:14px;" id="yearPresetRow">
+        <button type="button" class="year-preset" data-years="1">1年後</button>
+        <button type="button" class="year-preset" data-years="3">3年後</button>
+        <button type="button" class="year-preset" data-years="5">5年後</button>
+        <button type="button" class="year-preset" data-years="10">10年後</button>
+      </div>
+
+      <div class="button-row" style="margin-top:10px;" id="curvePresetRow">
+        <button type="button" class="curve-preset active" data-curve="on">年齢で少し緩やかにする</button>
+        <button type="button" class="curve-preset" data-curve="off">一定ペースで進む</button>
+      </div>
+
+      <div class="info-grid">
+        <div class="note">この予測は、現在の年齢・度数・眼軸長・これまでの進み方からみた目安です。年齢が上がると、10代後半で少しずつ進み方が緩やかになり、20歳を超えるとさらにゆっくりになる想定を入れています。</div>
+        <div class="note" id="effectSummary">治療効果と中断後の上乗せを表示します。</div>
+        <div class="note">オレンジ線は治療を途中でやめた場合の目安です。中断した直後だけ少し進みやすく、その後は年齢に応じた進み方へ近づく想定です。</div>
+      </div>
+
+      <div class="saved" id="savedMessage"></div>
+    </div>
+
+    <div class="preview-shell">
+      <div class="preview-tabs" id="previewTabs"></div>
+      <div class="swipe-hint">左右にスワイプして、治療法ごとに切り替えできます。</div>
+      <div class="preview-grid" id="previewGrid"></div>
+    </div>
+
+    <div class="card" style="max-width:980px;margin:24px auto 0;">
+      <div style="padding:18px;">
+        <div class="section-title">参考文献</div>
+                <div style="font-size:13px;line-height:1.8;color:var(--sub);">
+          <div>1. Chamberlain P, et al. A 3-Year Randomized Clinical Trial of MiSight Lenses for Myopia Control. Optom Vis Sci. 2019.</div>
+          <div>2. Yam JC, et al. Low-Concentration Atropine for Myopia Progression (LAMP) Study. Ophthalmology. 2019.</div>
+          <div>3. Kinoshita N, et al. Efficacy of combined orthokeratology and 0.01% atropine solution for slowing axial elongation in children with myopia: a 2-year randomised trial. Sci Rep. 2020.</div>
+          <div>4. Jones-Jordan LA, et al. Effect of Combining 0.01% Atropine with Soft Multifocal Contact Lenses on Myopia Progression in Children. JAMA Ophthalmol. 2022.</div>
+          <div>5. Yum HR, et al. Synergistic Effect of Dual-Focus Soft Contact Lenses and 0.05% Atropine in Children with Rapidly Progressive Myopia. Ophthalmic Physiol Opt. 2025.</div>
+          <div>6. Tu S, et al. Value of adding 0.01% atropine with orthokeratology for myopia control: an updated meta-analysis of randomized controlled trial. Front Pediatr. 2025.</div>
+          <div>7. 参天製薬. リジュセアミニ点眼液0.025％ 製品情報.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'mch_myopia_stable_with_axial_v1';
+    let currentPage = 0;
+    let resizeTimer = null;
+    let ageCurveMode = 'on';
+    let graphTabMode = 'refraction';
+
+    const defaultForm = {
+      hospital: '宮崎中央眼科病院',
+      patientName: '',
+      age: 8,
+      rightNow: -2.50,
+      leftNow: -2.25,
+      rightYearlyProgress: 1.00,
+      leftYearlyProgress: 1.00,
+      rightAxial: 24.20,
+      leftAxial: 24.10,
+      rightAxialYearly: 0.20,
+      leftAxialYearly: 0.20,
+      txEffectLow: 30,
+      txEffectHigh: 60,
+      forecastYears: 2,
+      stopYear: 2,
+      reboundExtra: 0.25,
+      axialReboundExtra: 0.05,
+      ageCurveMode: 'on',
+      graphTabMode: 'refraction',
+    };
+
+    const treatmentList = [
+      { key: 'rejus', name: 'リジュセアミニ点眼治療' },
+      { key: 'ortho', name: 'オルソ' },
+      { key: 'misight', name: 'マイサイト（近視抑制CL）' },
+      { key: 'rejus_misight', name: 'リジュセアミニ＋マイサイト' },
+      { key: 'rejus_ortho', name: 'リジュセアミニ＋オルソ' },
+    ];
+
+    const els = {
+      hospital: document.getElementById('hospital'),
+      patientName: document.getElementById('patientName'),
+      age: document.getElementById('age'),
+      rightNow: document.getElementById('rightNow'),
+      leftNow: document.getElementById('leftNow'),
+      rightYearlyProgress: document.getElementById('rightYearlyProgress'),
+      leftYearlyProgress: document.getElementById('leftYearlyProgress'),
+      rightAxial: document.getElementById('rightAxial'),
+      leftAxial: document.getElementById('leftAxial'),
+      rightAxialYearly: document.getElementById('rightAxialYearly'),
+      leftAxialYearly: document.getElementById('leftAxialYearly'),
+      txEffectLow: document.getElementById('txEffectLow'),
+      txEffectHigh: document.getElementById('txEffectHigh'),
+      forecastYears: document.getElementById('forecastYears'),
+      stopYear: document.getElementById('stopYear'),
+      reboundExtra: document.getElementById('reboundExtra'),
+      axialReboundExtra: document.getElementById('axialReboundExtra'),
+      heroHospital: document.getElementById('heroHospital'),
+      effectSummary: document.getElementById('effectSummary'),
+      previewGrid: document.getElementById('previewGrid'),
+      previewTabs: document.getElementById('previewTabs'),
+      yearPresetRow: document.getElementById('yearPresetRow'),
+      curvePresetRow: document.getElementById('curvePresetRow'),
+      savedMessage: document.getElementById('savedMessage'),
+      saveBtn: document.getElementById('saveBtn'),
+      resetBtn: document.getElementById('resetBtn'),
+      printBtn: document.getElementById('printBtn'),
+    };
+
+    function esc(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    function formatD(n) { return `${Number(n).toFixed(2)}D`; }
+    function formatMM(n) { return `${Number(n).toFixed(2)}mm`; }
+    function clampEffect(low, high) {
+      const safeLow = Math.max(0, Math.min(Number(low) || 0, 95));
+      const safeHigh = Math.max(safeLow, Math.min(Number(high) || 0, 95));
+      return [safeLow, safeHigh];
+    }
+
+    function getForm() {
+      const [low, high] = clampEffect(els.txEffectLow.value, els.txEffectHigh.value);
+      return {
+        hospital: els.hospital.value || '',
+        patientName: els.patientName.value || '',
+        age: Math.max(1, Math.min(Number(els.age.value) || 8, 40)),
+        rightNow: Number(els.rightNow.value) || 0,
+        leftNow: Number(els.leftNow.value) || 0,
+        rightYearlyProgress: Math.abs(Number(els.rightYearlyProgress.value) || 0),
+        leftYearlyProgress: Math.abs(Number(els.leftYearlyProgress.value) || 0),
+        rightAxial: Number(els.rightAxial.value) || 0,
+        leftAxial: Number(els.leftAxial.value) || 0,
+        rightAxialYearly: Math.abs(Number(els.rightAxialYearly.value) || 0),
+        leftAxialYearly: Math.abs(Number(els.leftAxialYearly.value) || 0),
+        txEffectLow: low,
+        txEffectHigh: high,
+        forecastYears: Math.max(1, Math.min(Number(els.forecastYears.value) || 2, 20)),
+        stopYear: Math.max(0, Math.min(Number(els.stopYear.value) || 0, 20)),
+        reboundExtra: Math.max(0, Math.min(Number(els.reboundExtra.value) || 0, 2)),
+        axialReboundExtra: Math.max(0, Math.min(Number(els.axialReboundExtra.value) || 0, 1)),
+        ageCurveMode,
+        graphTabMode,
+      };
+    }
+
+    function setForm(form) {
+      Object.keys(form).forEach((key) => {
+        if (els[key]) els[key].value = form[key];
+      });
+      ageCurveMode = form.ageCurveMode || 'on';
+      graphTabMode = form.graphTabMode || 'refraction';
+    }
+
+    function buildTimelinePoints(forecastYears) {
+      const maxYears = Math.max(1, Math.min(Number(forecastYears) || 2, 20));
+      const points = [{ label: '現在', years: 0 }, { label: '6か月', years: 0.5 }];
+      for (let year = 1; year <= maxYears; year += 1) points.push({ label: `${year}年`, years: year });
+      return points;
+    }
+
+    function ageFactor(age, mode) {
+      if (mode === 'off') return 1;
+      const x = Math.max(0, age - 12);
+      const baseCurve = 0.18 + (1 - 0.18) * Math.exp(-0.22 * x);
+      if (age <= 20) return Math.max(0.18, Math.min(1, baseCurve));
+      const over20 = age - 20;
+      const taper20s = 0.08 + (0.18 - 0.08) * Math.exp(-0.28 * over20);
+      return Math.max(0.08, Math.min(1, taper20s));
+    }
+
+    function integrateValue(base, yearly, startAge, yearsElapsed, mode, direction) {
+      const step = 0.25;
+      let change = 0;
+      for (let t = 0; t < yearsElapsed; t += step) {
+        const dt = Math.min(step, yearsElapsed - t);
+        const currentAge = startAge + t;
+        change += yearly * ageFactor(currentAge, mode) * dt;
+      }
+      return direction === 'minus' ? base - change : base + change;
+    }
+
+
+    function getTreatmentProfile(treatmentKey, form) {
+      if (treatmentKey === 'misight') {
+        return {
+          refraction: { mode: 'fixed_schedule', schedule: [69, 59, 59] },
+          axial: { mode: 'fixed_schedule', schedule: [63, 54, 52] },
+          summary: 'マイサイトは文献値に合わせ、屈折は1年後69%、2〜3年後59%、眼軸長は1年後63%、2年後54%、3年後52%で計算します。3年以降は3年後の値を維持する想定です。'
+        };
+      }
+      if (treatmentKey === 'rejus_misight') {
+        return {
+          refraction: { mode: 'fixed_schedule', schedule: [75, 67, 67] },
+          axial: { mode: 'fixed_schedule', schedule: [72, 62, 58] },
+          summary: 'リジュセアミニ＋マイサイトは参考設定です。0.025%製剤そのものの直接比較データはまだ十分ではないため、0.05%アトロピン＋MiSightの加算効果報告を参考に、単独MiSightよりやや強めの参考値（屈折 1年後75%、2〜3年後67%、眼軸長 1年後72%、2年後62%、3年後58%）で計算します。'
+        };
+      }
+      if (treatmentKey === 'rejus_ortho') {
+        return {
+          refraction: { mode: 'fixed_schedule', schedule: [70, 65, 60] },
+          axial: { mode: 'fixed_schedule', schedule: [68, 60, 58] },
+          summary: 'リジュセアミニ＋オルソは、オルソ単独より眼軸長抑制が上乗せされる報告をもとにした固定設定です。参考値として、屈折は1年後70%、2年後65%、3年後60%、眼軸長は1年後68%、2年後60%、3年後58%で計算します。'
+        };
+      }
+      const [low, high] = clampEffect(form.txEffectLow, form.txEffectHigh);
+      return {
+        refraction: { mode: 'range', low, high },
+        axial: { mode: 'range', low, high },
+        summary: `現在は ${low}%〜${high}% の抑制目安で計算します。`
+      };
+    }
+
+    function scheduledEffectAt(schedule, tYears) {
+      if (tYears < 1) return (schedule[0] || 0) / 100;
+      if (tYears < 2) return (schedule[1] ?? schedule[schedule.length - 1] ?? 0) / 100;
+      return (schedule[2] ?? schedule[schedule.length - 1] ?? 0) / 100;
+    }
+
+    function integrateTreatedValue(base, yearly, startAge, yearsElapsed, mode, direction, profile) {
+      if (!profile) return integrateValue(base, yearly, startAge, yearsElapsed, mode, direction);
+      if (profile.mode === 'range') {
+        return {
+          low: integrateValue(base, yearly * (1 - profile.high / 100), startAge, yearsElapsed, mode, direction),
+          high: integrateValue(base, yearly * (1 - profile.low / 100), startAge, yearsElapsed, mode, direction),
+        };
+      }
+      if (profile.mode === 'fixed_schedule') {
+        const step = 0.25;
+        let change = 0;
+        for (let t = 0; t < yearsElapsed; t += step) {
+          const dt = Math.min(step, yearsElapsed - t);
+          const currentAge = startAge + t;
+          const effect = scheduledEffectAt(profile.schedule, t);
+          change += yearly * (1 - effect) * ageFactor(currentAge, mode) * dt;
+        }
+        const value = direction === 'minus' ? base - change : base + change;
+        return { low: value, high: value };
+      }
+      return {
+        low: integrateValue(base, yearly, startAge, yearsElapsed, mode, direction),
+        high: integrateValue(base, yearly, startAge, yearsElapsed, mode, direction),
+      };
+    }
+
+    function buildRefractionData(base, yearly, forecastYears, startAge, mode, profile) {
+      const points = buildTimelinePoints(forecastYears);
+      return points.map((point) => {
+        const noTx = integrateValue(base, yearly, startAge, point.years, mode, 'minus');
+        const treated = integrateTreatedValue(base, yearly, startAge, point.years, mode, 'minus', profile);
+        const txLow = treated.low;
+        const txHigh = treated.high;
+        return { label: point.label, years: point.years, noTx, txLow, txHigh, txCenter: (txLow + txHigh) / 2, bandRange: Math.max(0, txLow - txHigh) };
+      });
+    }
+
+    function buildStopRefractionData(base, yearly, forecastYears, startAge, stopYear, reboundExtra, mode, profile) {
+      const points = buildTimelinePoints(forecastYears);
+      if (stopYear <= 0) return points.map((point) => ({ label: point.label, years: point.years, stopTx: null }));
+      return points.map((point) => {
+        let current = base;
+        const step = 0.25;
+        for (let t = 0; t < point.years; t += step) {
+          const dt = Math.min(step, point.years - t);
+          const currentAge = startAge + t;
+          let rate;
+          if (t < stopYear) {
+            if (profile?.mode === 'fixed_schedule') {
+              rate = yearly * (1 - scheduledEffectAt(profile.schedule, t));
+            } else if (profile?.mode === 'range') {
+              rate = yearly * (1 - (((profile.low || 0) + (profile.high || 0)) / 2) / 100);
+            } else {
+              rate = yearly;
+            }
+          } else {
+            rate = t < stopYear + 1 ? yearly + reboundExtra : yearly;
+          }
+          current -= rate * ageFactor(currentAge, mode) * dt;
+        }
+        return { label: point.label, years: point.years, stopTx: current };
+      });
+    }
+
+    function buildAxialData(base, yearly, forecastYears, startAge, mode, profile) {
+      const points = buildTimelinePoints(forecastYears);
+      return points.map((point) => {
+        const noTx = integrateValue(base, yearly, startAge, point.years, mode, 'plus');
+        const treated = integrateTreatedValue(base, yearly, startAge, point.years, mode, 'plus', profile);
+        const txLow = treated.low;
+        const txHigh = treated.high;
+        return { label: point.label, years: point.years, noTx, txLow, txHigh, txCenter: (txLow + txHigh) / 2, bandRange: Math.max(0, txHigh - txLow) };
+      });
+    }
+
+    function buildStopAxialData(base, yearly, forecastYears, startAge, stopYear, reboundExtra, mode, profile) {
+      const points = buildTimelinePoints(forecastYears);
+      if (stopYear <= 0) return points.map((point) => ({ label: point.label, years: point.years, stopTx: null }));
+      return points.map((point) => {
+        let current = base;
+        const step = 0.25;
+        for (let t = 0; t < point.years; t += step) {
+          const dt = Math.min(step, point.years - t);
+          const currentAge = startAge + t;
+          let rate;
+          if (t < stopYear) {
+            if (profile?.mode === 'fixed_schedule') {
+              rate = yearly * (1 - scheduledEffectAt(profile.schedule, t));
+            } else if (profile?.mode === 'range') {
+              rate = yearly * (1 - (((profile.low || 0) + (profile.high || 0)) / 2) / 100);
+            } else {
+              rate = yearly;
+            }
+          } else {
+            rate = t < stopYear + 1 ? yearly + reboundExtra : yearly;
+          }
+          current += rate * ageFactor(currentAge, mode) * dt;
+        }
+        return { label: point.label, years: point.years, stopTx: current };
+      });
+    }
+
+    function smoothPath(points) {
+      if (!points.length) return '';
+      if (points.length === 1) return `M ${points[0][0]} ${points[0][1]}`;
+      let path = `M ${points[0][0]} ${points[0][1]}`;
+      for (let i = 0; i < points.length - 1; i += 1) {
+        const p0 = points[i - 1] || points[i];
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const p3 = points[i + 2] || p2;
+        const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+        const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+        const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+        const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+        path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2[0]} ${p2[1]}`;
+      }
+      return path;
+    }
+
+    function buildSvgGraph(data, stopData, stopYear, unitFormatter, direction) {
+      const width = 900;
+      const height = 320;
+      const pad = { top: 22, right: 20, bottom: 42, left: 58 };
+      const chartW = width - pad.left - pad.right;
+      const chartH = height - pad.top - pad.bottom;
+      const stopValues = stopData.filter(d => d.stopTx !== null).map(d => d.stopTx);
+      const values = data.flatMap(d => [d.noTx, d.txLow, d.txHigh]).concat(stopValues);
+      const min = Math.floor(Math.min(...values) * 10 - 5) / 10;
+      const max = Math.ceil(Math.max(...values) * 10 + 5) / 10;
+      const x = (i) => pad.left + (chartW * i / Math.max(1, data.length - 1));
+      const xAtYears = (years) => pad.left + (chartW * years / Math.max(1, data[data.length - 1].years));
+      const y = (v) => pad.top + ((max - v) / Math.max(0.01, max - min)) * chartH;
+
+      const grid = Array.from({ length: 5 }, (_, i) => {
+        const v = min + (max - min) * (i / 4);
+        const yy = y(v);
+        return `<line x1="${pad.left}" y1="${yy}" x2="${width - pad.right}" y2="${yy}" stroke="#e2e8f0" stroke-width="1" /><text x="6" y="${yy + 4}" font-size="12" fill="#64748b">${unitFormatter(v)}</text>`;
+      }).join('');
+
+      const labels = data.map((d, i) => `<text x="${x(i)}" y="${height - 12}" font-size="12" text-anchor="middle" fill="#64748b">${esc(d.label)}</text>`).join('');
+      const bandTop = data.map((d, i) => `${x(i)},${y(d.txHigh)}`).join(' ');
+      const bandBottom = data.slice().reverse().map((d, i) => {
+        const originalIndex = data.length - 1 - i;
+        return `${x(originalIndex)},${y(d.txLow)}`;
+      }).join(' ');
+      const noTxPoints = data.map((d, i) => [x(i), y(d.noTx)]);
+      const txPoints = data.map((d, i) => [x(i), y(d.txCenter)]);
+      const stopPlot = stopData.map((d, i) => d.stopTx === null ? null : [x(i), y(d.stopTx)]).filter(Boolean);
+      const noTxPath = smoothPath(noTxPoints);
+      const txPath = smoothPath(txPoints);
+      const stopPath = stopPlot.length ? smoothPath(stopPlot) : '';
+      const noTxDots = data.map((d, i) => `<circle cx="${x(i)}" cy="${y(d.noTx)}" r="4" fill="#111827" />`).join('');
+      const showStop = stopYear > 0 && stopPlot.length > 1;
+      const stopX = xAtYears(Math.min(stopYear, data[data.length - 1].years));
+      const bandFill = direction === 'minus' ? 'rgba(59,130,246,0.16)' : 'rgba(16,185,129,0.16)';
+
+      return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="予測グラフ">
+        ${grid}
+        ${showStop ? `<line x1="${stopX}" y1="${pad.top}" x2="${stopX}" y2="${height - pad.bottom}" stroke="#ea580c" stroke-width="2" stroke-dasharray="4 4"></line><text x="${Math.min(stopX + 8, width - 90)}" y="${pad.top + 14}" font-size="12" fill="#ea580c">ここで中断</text>` : ''}
+        <polygon points="${bandTop} ${bandBottom}" fill="${bandFill}" stroke="none"></polygon>
+        <path d="${noTxPath}" fill="none" stroke="#111827" stroke-width="3"></path>
+        ${noTxDots}
+        <path d="${txPath}" fill="none" stroke="#2563eb" stroke-width="3" stroke-dasharray="8 6"></path>
+        ${showStop ? `<path d="${stopPath}" fill="none" stroke="#ea580c" stroke-width="3"></path>` : ''}
+        ${labels}
+      </svg>`;
+    }
+
+    function treatmentCopy(treatment, age, stopYear, reboundExtra, axialReboundExtra, mode) {
+      const curveText = mode === 'on'
+        ? `現在 ${age}歳として、年齢が上がると10代後半で少し緩やかになり、20歳を超えるとさらにゆっくりになる想定を入れています。`
+        : `年齢による変化を入れず、一定ペースで進む想定です。`;
+      const stopText = stopYear > 0
+        ? `${stopYear}年後に中断すると、やめた直後の約1年間だけ屈折は +${reboundExtra.toFixed(2)}D/年、眼軸長は +${axialReboundExtra.toFixed(2)}mm/年 だけ進みやすくなる想定です。`
+        : `中断線は表示していません。`;
+      if (treatment === 'リジュセアミニ点眼治療') {
+        return {
+          title: 'リジュセアミニ点眼治療での近視の見かた',
+          explanation: `この画面は、現在の近視の進み方と眼軸長の伸び方をもとにした将来予測の目安です。${curveText} リジュセアミニ点眼治療では、その進み方をゆるやかにできる可能性があります。ただし、効果には個人差があり、予定どおりになるとは限りません。${stopText}`,
+          caution: '予測は目安です。効果には個人差があります。点眼治療の継続状況や中断時期も含めて、定期受診で確認していくことが大切です。',
+        };
+      }
+      if (treatment === 'マイサイト（近視抑制CL）') {
+        return {
+          title: 'マイサイト（近視抑制CL）での近視の見かた',
+          explanation: `この画面は、現在の近視の進み方と眼軸長の伸び方をもとにした将来予測の目安です。${curveText} マイサイト（近視抑制CL）では、その進み方をゆるやかにできる可能性があります。この画面では、屈折は1年後69%、2〜3年後59%、眼軸長は1年後63%、2年後54%、3年後52%の報告値をもとに表示しています。ただし、効果には個人差があり、予定どおりになるとは限りません。${stopText}`,
+          caution: '予測は目安です。効果には個人差があります。レンズ装用状況や中断時期も含めて、定期受診で確認していくことが大切です。',
+        };
+      }
+      if (treatment === 'リジュセアミニ＋マイサイト') {
+        return {
+          title: 'リジュセアミニ＋マイサイトでの近視の見かた',
+          explanation: `この画面は、現在の近視の進み方と眼軸長の伸び方をもとにした将来予測の目安です。${curveText} リジュセアミニ＋マイサイトは、単独治療より強い抑制が期待される併用治療として参考表示しています。なお、この設定はリジュセアミニ0.025%そのものの直接比較ではなく、0.05%アトロピン＋MiSightの加算効果報告を参考にした目安です。したがって、実際の経過はこの表示より強い場合も弱い場合もあります。${stopText}`,
+          caution: 'この併用設定は参考値です。特にマイサイト併用は0.05%アトロピン報告を参考にしているため、リジュセアミニ0.025%で同等になるとは限りません。',
+        };
+      }
+      if (treatment === 'リジュセアミニ＋オルソ') {
+        return {
+          title: 'リジュセアミニ＋オルソでの近視の見かた',
+          explanation: `この画面は、現在の近視の進み方と眼軸長の伸び方をもとにした将来予測の目安です。${curveText} リジュセアミニ＋オルソは、オルソ単独より眼軸長抑制が上乗せされる報告をもとにした併用治療の参考表示です。特に、オルソ単独でやや進行が残る場合に追加治療として検討されることがあります。ただし、効果には個人差があり、予定どおりになるとは限りません。${stopText}`,
+          caution: '予測は目安です。効果には個人差があります。併用時は角膜所見、装用状況、点眼継続の確認を含めて定期受診で評価することが大切です。',
+        };
+      }
+      return {
+        title: 'オルソケラトロジー治療での近視の見かた',
+        explanation: `この画面は、現在の近視の進み方と眼軸長の伸び方をもとにした将来予測の目安です。${curveText} オルソケラトロジーでは、その進み方をゆるやかにできる可能性があります。ただし、効果には個人差があり、予定どおりになるとは限りません。${stopText}`,
+        caution: '予測は目安です。効果には個人差があります。装用状況や中断時期も含めて、定期受診で確認していくことが大切です。',
+      };
+    }
+
+    function updateButtons(form) {
+      document.querySelectorAll('.year-preset').forEach((button) => button.classList.toggle('active', Number(button.dataset.years) === Number(form.forecastYears)));
+      document.querySelectorAll('.curve-preset').forEach((button) => button.classList.toggle('active', button.dataset.curve === ageCurveMode));
+      document.querySelectorAll('.inner-graph-tab').forEach((button) => button.classList.toggle('active', button.dataset.graph === graphTabMode));
+      document.querySelectorAll('.graph-panel').forEach((panel) => panel.classList.toggle('active', panel.dataset.graphPanel === graphTabMode));
+    }
+
+    function syncCurrentPageFromScroll() {
+      const width = els.previewGrid.clientWidth || 1;
+      currentPage = Math.round(els.previewGrid.scrollLeft / width);
+      els.previewTabs.querySelectorAll('.preview-tab').forEach((tab, idx) => tab.classList.toggle('active', idx === currentPage));
+    }
+
+    function goToPage(index) {
+      currentPage = Math.max(0, Math.min(index, treatmentList.length - 1));
+      const width = els.previewGrid.clientWidth || 1;
+      els.previewGrid.scrollTo({ left: width * currentPage, behavior: 'smooth' });
+      requestAnimationFrame(syncCurrentPageFromScroll);
+    }
+
+    function render() {
+      const form = getForm();
+
+      els.heroHospital.textContent = `${form.hospital || '病院名未入力'} 近視進行予測`;
+      els.effectSummary.textContent = `リジュセアミニ点眼治療・オルソは入力欄の ${form.txEffectLow}%〜${form.txEffectHigh}% で計算します。マイサイトは屈折 69/59/59%、眼軸長 63/54/52% の固定設定、リジュセアミニ＋マイサイトは0.05%アトロピン併用報告を参考にした参考値、リジュセアミニ＋オルソは併用上乗せ報告を参考にした固定設定です。${form.stopYear > 0 ? `${form.stopYear}年後に中断、直後は屈折 +${form.reboundExtra.toFixed(2)}D/年・眼軸長 +${form.axialReboundExtra.toFixed(2)}mm/年 の上乗せ` : '中断線なし'}。年齢カーブは ${form.ageCurveMode === 'on' ? 'ON' : 'OFF'} です。`;
+      updateButtons(form);
+
+      els.previewTabs.innerHTML = treatmentList.map((item, idx) => `<button class="preview-tab ${idx === currentPage ? 'active' : ''}" type="button" data-page="${idx}">${item.name}</button>`).join('');
+
+      els.previewGrid.innerHTML = treatmentList.map((item, idx) => {
+        const profile = getTreatmentProfile(item.key, form);
+        const rightRef = buildRefractionData(form.rightNow, form.rightYearlyProgress, form.forecastYears, form.age, form.ageCurveMode, profile.refraction);
+        const leftRef = buildRefractionData(form.leftNow, form.leftYearlyProgress, form.forecastYears, form.age, form.ageCurveMode, profile.refraction);
+        const rightRefStop = buildStopRefractionData(form.rightNow, form.rightYearlyProgress, form.forecastYears, form.age, form.stopYear, form.reboundExtra, form.ageCurveMode, profile.refraction);
+        const leftRefStop = buildStopRefractionData(form.leftNow, form.leftYearlyProgress, form.forecastYears, form.age, form.stopYear, form.reboundExtra, form.ageCurveMode, profile.refraction);
+
+        const rightAx = buildAxialData(form.rightAxial, form.rightAxialYearly, form.forecastYears, form.age, form.ageCurveMode, profile.axial);
+        const leftAx = buildAxialData(form.leftAxial, form.leftAxialYearly, form.forecastYears, form.age, form.ageCurveMode, profile.axial);
+        const rightAxStop = buildStopAxialData(form.rightAxial, form.rightAxialYearly, form.forecastYears, form.age, form.stopYear, form.axialReboundExtra, form.ageCurveMode, profile.axial);
+        const leftAxStop = buildStopAxialData(form.leftAxial, form.leftAxialYearly, form.forecastYears, form.age, form.stopYear, form.axialReboundExtra, form.ageCurveMode, profile.axial);
+
+        const rightRefSvg = buildSvgGraph(rightRef, rightRefStop, form.stopYear, (v) => `${v.toFixed(1)}D`, 'minus');
+        const leftRefSvg = buildSvgGraph(leftRef, leftRefStop, form.stopYear, (v) => `${v.toFixed(1)}D`, 'minus');
+        const rightAxSvg = buildSvgGraph(rightAx, rightAxStop, form.stopYear, (v) => `${v.toFixed(1)}mm`, 'plus');
+        const leftAxSvg = buildSvgGraph(leftAx, leftAxStop, form.stopYear, (v) => `${v.toFixed(1)}mm`, 'plus');
+
+        const copy = treatmentCopy(item.name, form.age, form.stopYear, form.reboundExtra, form.axialReboundExtra, form.ageCurveMode);
+        const patientLabel = form.patientName ? `${form.patientName}さん` : '患者さん';
+        const rightRefFuture = rightRef[rightRef.length - 1];
+        const leftRefFuture = leftRef[leftRef.length - 1];
+        const rightRefStopFuture = rightRefStop[rightRefStop.length - 1];
+        const leftRefStopFuture = leftRefStop[leftRefStop.length - 1];
+        const rightAxFuture = rightAx[rightAx.length - 1];
+        const leftAxFuture = leftAx[leftAx.length - 1];
+        const rightAxStopFuture = rightAxStop[rightAxStop.length - 1];
+        const leftAxStopFuture = leftAxStop[leftAxStop.length - 1];
+
+        return `<div class="preview-page"><div class="card preview"><div class="preview-head"><div><div style="font-size:18px;font-weight:800;line-height:1.4;">${esc(copy.title)}</div><div style="font-size:12px;color:#64748b;margin-top:4px;">${esc(patientLabel)}・本人ご家族への説明用</div></div><div class="preview-badge">${esc(item.name)}</div></div><div class="preview-body">
+          <div class="metric-grid">
+            <div class="metric"><div class="label">現在年齢</div><div class="value">${form.age}歳</div></div>
+            <div class="metric"><div class="label">現在度数</div><div class="value">R ${formatD(form.rightNow)}</div><div class="subvalue">L ${formatD(form.leftNow)}</div></div>
+            <div class="metric"><div class="label">眼軸長</div><div class="value">R ${formatMM(form.rightAxial)}</div><div class="subvalue">L ${formatMM(form.leftAxial)}</div></div>
+          </div>
+
+          <div class="impact-box">
+            <div class="impact-main"><div class="title">治療しない場合の${form.forecastYears}年後の目安</div><div class="big">屈折：R ${formatD(rightRefFuture.noTx)} / L ${formatD(leftRefFuture.noTx)}</div><div class="sub">眼軸長：R ${formatMM(rightAxFuture.noTx)} / L ${formatMM(leftAxFuture.noTx)}</div></div>
+            <div class="impact-side"><div class="title">治療した場合の${form.forecastYears}年後の目安</div><div class="big">継続：R ${formatD(rightRefFuture.txCenter)} / L ${formatD(leftRefFuture.txCenter)}<br>${form.stopYear > 0 ? `中断：R ${formatD(rightRefStopFuture.stopTx)} / L ${formatD(leftRefStopFuture.stopTx)}` : '中断：表示なし'}</div><div class="sub">眼軸長 継続：R ${formatMM(rightAxFuture.txCenter)} / L ${formatMM(leftAxFuture.txCenter)}<br>${form.stopYear > 0 ? `眼軸長 中断：R ${formatMM(rightAxStopFuture.stopTx)} / L ${formatMM(leftAxStopFuture.stopTx)}` : ''}</div></div>
+          </div>
+
+          <div class="section"><div class="section-title">ご家族への説明</div><p>${esc(copy.explanation)}</p></div>
+          <div class="section"><div class="section-title">この治療法の計算設定</div><p>${esc(profile.summary)}</p></div>
+
+          <div class="section">
+            <div class="section-title">予測グラフ</div>
+            <div class="inner-graph-tabs">
+              <button type="button" class="inner-graph-tab ${graphTabMode === 'refraction' ? 'active' : ''}" data-graph="refraction">屈折</button>
+              <button type="button" class="inner-graph-tab ${graphTabMode === 'axial' ? 'active' : ''}" data-graph="axial">眼軸長</button>
+            </div>
+
+            <div class="graph-panel ${graphTabMode === 'refraction' ? 'active' : ''}" data-graph-panel="refraction">
+              <div class="graph-message"><strong>黒い線</strong>は治療しない場合、<strong>青い線</strong>は治療を続けた場合、<strong>オレンジの線</strong>は途中で中断した場合の目安です。</div>
+              <div class="legend"><span>黒線：治療なし</span><span>青破線：治療あり継続</span>${form.stopYear > 0 ? '<span class="stop-line">オレンジ線：途中で中断</span>' : ''}</div>
+              <div class="graph-message">右眼</div><div class="graph-wrap">${rightRefSvg}</div>
+              <div class="graph-message" style="margin-top:12px;">左眼</div><div class="graph-wrap">${leftRefSvg}</div>
+            </div>
+
+            <div class="graph-panel ${graphTabMode === 'axial' ? 'active' : ''}" data-graph-panel="axial">
+              <div class="graph-message"><strong>眼軸長</strong>は、眼球の長さの目安です。黒い線は治療しない場合、青い線は治療を続けた場合、オレンジの線は途中で中断した場合の目安です。</div>
+              <div class="legend"><span>黒線：治療なし</span><span>青破線：治療あり継続</span>${form.stopYear > 0 ? '<span class="stop-line">オレンジ線：途中で中断</span>' : ''}</div>
+              <div class="graph-message">右眼</div><div class="graph-wrap">${rightAxSvg}</div>
+              <div class="graph-message" style="margin-top:12px;">左眼</div><div class="graph-wrap">${leftAxSvg}</div>
+            </div>
+          </div>
+
+          <div class="warn-box">大切な注意点： ${esc(copy.caution)}</div>
+        </div></div></div>`;
+      }).join('');
+
+      requestAnimationFrame(() => {
+        const pageWidth = els.previewGrid.clientWidth || 1;
+        els.previewGrid.scrollTo({ left: pageWidth * currentPage, behavior: 'auto' });
+        syncCurrentPageFromScroll();
+      });
+    }
+
+    function showSavedMessage(text) {
+      els.savedMessage.textContent = text;
+      els.savedMessage.style.display = 'block';
+      clearTimeout(showSavedMessage._timer);
+      showSavedMessage._timer = setTimeout(() => { els.savedMessage.style.display = 'none'; }, 1800);
+    }
+
+    function saveForm() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(getForm()));
+      showSavedMessage('端末内に保存しました');
+    }
+
+    function resetForm() {
+      setForm(defaultForm);
+      saveForm();
+      render();
+      showSavedMessage('初期値に戻しました');
+    }
+
+    function loadForm() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultForm;
+        return { ...defaultForm, ...JSON.parse(raw) };
+      } catch {
+        return defaultForm;
+      }
+    }
+
+    function scheduleRender() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(render, 80);
+    }
+
+    Object.values(els).forEach((el) => {
+      if (el instanceof HTMLInputElement) {
+        el.addEventListener('input', () => { saveForm(); scheduleRender(); });
+        el.addEventListener('change', () => { saveForm(); scheduleRender(); });
+      }
+    });
+
+    els.saveBtn.addEventListener('click', saveForm);
+    els.resetBtn.addEventListener('click', resetForm);
+    els.printBtn.addEventListener('click', () => window.print());
+    els.yearPresetRow.addEventListener('click', (event) => {
+      const target = event.target.closest('[data-years]');
+      if (!target) return;
+      els.forecastYears.value = Number(target.dataset.years) || 2;
+      saveForm();
+      render();
+    });
+    els.curvePresetRow.addEventListener('click', (event) => {
+      const target = event.target.closest('[data-curve]');
+      if (!target) return;
+      ageCurveMode = target.dataset.curve || 'on';
+      saveForm();
+      render();
+    });
+    document.addEventListener('click', (event) => {
+      const target = event.target.closest('[data-graph]');
+      if (!target) return;
+      graphTabMode = target.dataset.graph || 'refraction';
+      saveForm();
+      updateButtons(getForm());
+    });
+    els.previewTabs.addEventListener('click', (event) => {
+      const target = event.target.closest('[data-page]');
+      if (!target) return;
+      goToPage(Number(target.dataset.page) || 0);
+    });
+    els.previewGrid.addEventListener('scroll', () => requestAnimationFrame(syncCurrentPageFromScroll), { passive: true });
+    window.addEventListener('resize', scheduleRender, { passive: true });
+    window.addEventListener('orientationchange', () => setTimeout(render, 120));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleRender(); });
+
+    setForm(loadForm());
+    render();
+  </script>
+</body>
+</html>
